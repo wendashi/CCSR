@@ -18,7 +18,7 @@ from model.cond_fn import MSEGuidance
 from utils.image import auto_resize, pad
 from utils.common import instantiate_from_config, load_state_dict
 from utils.file import list_image_files, get_file_name_parts
-
+import time
 
 @torch.no_grad()
 def process(
@@ -96,34 +96,34 @@ def process(
     return preds
 
 
-def parse_args() -> Namespace:
-    parser = ArgumentParser()
+# def parse_args() -> Namespace:
+#     parser = ArgumentParser()
 
-    parser.add_argument("--ckpt", type=str, help="full checkpoint path",
-                        default='weights/real-world_ccsr.ckpt')
-    parser.add_argument("--config", type=str, help="model config path", default='configs/model/ccsr_stage2.yaml')
+#     parser.add_argument("--ckpt", type=str, help="full checkpoint path",
+#                         default='weights/real-world_ccsr.ckpt')
+#     parser.add_argument("--config", type=str, help="model config path", default='configs/model/ccsr_stage2.yaml')
 
-    parser.add_argument("--input", type=str, default='preset/test_datasets')
-    parser.add_argument("--steps", type=int, default=45)
-    parser.add_argument("--sr_scale", type=float, default=4)
-    parser.add_argument("--repeat_times", type=int, default=1)
+#     parser.add_argument("--input", type=str, default='preset/test_datasets')
+#     parser.add_argument("--steps", type=int, default=45)
+#     parser.add_argument("--sr_scale", type=float, default=4)
+#     parser.add_argument("--repeat_times", type=int, default=1)
 
-    # patch-based sampling (tiling settings)
-    parser.add_argument("--tiled", action="store_true")
-    parser.add_argument("--tile_size", type=int, default=512)  # image size
-    parser.add_argument("--tile_stride", type=int, default=256)  # image size
+#     # patch-based sampling (tiling settings)
+#     parser.add_argument("--tiled", action="store_true")
+#     parser.add_argument("--tile_size", type=int, default=512)  # image size
+#     parser.add_argument("--tile_stride", type=int, default=256)  # image size
 
-    parser.add_argument("--color_fix_type", type=str, default="adain", choices=["wavelet", "adain", "none"])
-    parser.add_argument("--output", type=str, default="experiments/test")
-    parser.add_argument("--t_max", type=float, default=0.6667)
-    parser.add_argument("--t_min", type=float, default=0.3333)
-    parser.add_argument("--show_lq", action="store_true")
-    parser.add_argument("--skip_if_exist", action="store_true")
+#     parser.add_argument("--color_fix_type", type=str, default="adain", choices=["wavelet", "adain", "none"])
+#     parser.add_argument("--output", type=str, default="experiments/test")
+#     parser.add_argument("--t_max", type=float, default=0.6667)
+#     parser.add_argument("--t_min", type=float, default=0.3333)
+#     parser.add_argument("--show_lq", action="store_true")
+#     parser.add_argument("--skip_if_exist", action="store_true")
 
-    parser.add_argument("--seed", type=int, default=233)
-    parser.add_argument("--device", type=str, default="cuda", choices=["cpu", "cuda", "mps"])
+#     parser.add_argument("--seed", type=int, default=233)
+#     parser.add_argument("--device", type=str, default="cuda", choices=["cpu", "cuda", "mps"])
 
-    return parser.parse_args()
+#     return parser.parse_args()
 
 
 def check_device(device):
@@ -151,8 +151,10 @@ def check_device(device):
     return device
 
 
-def main() -> None:
-    args = parse_args()
+def main(args) -> None:
+    #args = parse_args()
+    input_path = args.input
+    output_path = args.output
     pl.seed_everything(args.seed)
 
     args.device = check_device(args.device)
@@ -187,7 +189,8 @@ def main() -> None:
         for i in range(args.repeat_times):
             save_path = os.path.join(args.output, os.path.relpath(file_path, args.input))
             parent_path, stem, _ = get_file_name_parts(save_path)
-            save_path_now = os.path.join(parent_path, 'sample' + str(i))
+            # save_path_now = os.path.join(parent_path, 'sample' + str(i))
+            save_path_now = os.path.join(parent_path)
 
             save_path = os.path.join(save_path_now, f"{stem}.png")
             if os.path.exists(save_path):
@@ -202,6 +205,7 @@ def main() -> None:
             # initialize latent image guidance
             cond_fn = None
 
+            start_time = time.time()
             preds = process(
                 model, [x], steps=args.steps,
                 t_max=args.t_max, t_min=args.t_min,
@@ -210,6 +214,9 @@ def main() -> None:
                 cond_fn=cond_fn,
                 tiled=args.tiled, tile_size=args.tile_size, tile_stride=args.tile_stride
             )
+            stop_time = time.time()
+
+            print(f'inference  time: {stop_time - start_time} seconds')
             pred = preds[0]
             # remove padding
             # pred = pred[:lq_resized.height, :lq_resized.width, :]
@@ -224,7 +231,9 @@ def main() -> None:
                 Image.fromarray(pred).resize(lq.size, Image.LANCZOS).save(save_path)
                 # pred.save(save_path)
             print(f"save to {save_path}")
+    
+    return save_path
 
 
 if __name__ == "__main__":
-    main()
+    sr_output_dir = main()
