@@ -1,119 +1,85 @@
 from inference_ccsr import main
 from argparse import ArgumentParser, Namespace
 from resize import resize_image
-from crop1_4 import crop
+# from crop1_4 import crop
 from combine4_1 import combine
 import os
+import yaml
 
-# 输入图像的尺寸 [宽，高]
-input_size = [512, 512] 
-# 超分倍数（2 or 4 or 8  ）
-sr_xn = 8 
-# 超分输入图片所在路径
-sr_input = '/home/stone/Desktop/SR/CCSR1/CCSR/preset/test-512'
-# 超分输出图片路径（sr 最终结果）
-sr_output = f'/home/stone/Desktop/SR/CCSR1/CCSR/experiments/sr{sr_xn}_output' 
-# 中间结果保存位置（sr 中间结果，x4和x8才有中间结果）
-if sr_xn == 4:
-    sr_mid_xn = os.path.join(sr_output, 'mid_x4')   
-elif sr_xn == 8:
-    sr_mid_xn = os.path.join(sr_output,'mid_x8')
-    sr_mid_xn1 = os.path.join(sr_output,'mid_x8_1')
+def srxn(input_size, sr_xn, sr_input):
+    # 基础配置
+    sr_output = f'{sr_input}/srx{sr_xn}_output'
+    args = create_args(sr_input, sr_output, sr_xn)
 
-def parse_args() -> Namespace:
-    parser = ArgumentParser()
+    if sr_xn == 2:
+        sr_output = process_x2(args, sr_input, sr_output)
+    elif sr_xn == 4:
+        sr_output = process_x4(args, sr_input, sr_output, input_size)
+    # elif sr_xn == 8:
+    #     sr_output = process_x8(args, sr_input, sr_output, input_size)
 
-    parser.add_argument("--ckpt", type=str, help="full checkpoint path", default='/home/stone/Desktop/SR/CCSR1/CCSR/pre-trained-models/real-world_ccsr.ckpt')
+    return sr_output
 
-    # 这个位置注意是 ccsr_stage2.yaml 
-    parser.add_argument("--config", type=str, help="model config path", default='/home/stone/Desktop/SR/CCSR1/CCSR/configs/model/ccsr_stage2.yaml')
+def create_args(sr_input, sr_output, sr_xn, config_path='/home/stone/Desktop/SR/CCSR1/CCSR/sx_xn.yml'):
+    # 从YAML文件读取配置
+    with open(config_path, 'r') as file:
+        config = yaml.safe_load(file)
+    
+    # 更新从函数参数获取的值
+    config['input'] = sr_input
+    # config['sr_scale'] = sr_xn # 2 可以，4 可以
+    config['output'] = sr_output
 
-    parser.add_argument("--input", type=str, default='preprocess_img/input_x2')
-    parser.add_argument("--steps", type=int, default=45)
-    parser.add_argument("--sr_scale", type=float, default=4)
-    parser.add_argument("--repeat_times", type=int, default=1)
+    # 将配置字典转换为Namespace对象
+    args = Namespace(**config)
+    return args
 
-    # patch-based sampling (tiling settings)
-    parser.add_argument("--tiled", action="store_true")
-    parser.add_argument("--tile_size", type=int, default=512)  # image size
-    parser.add_argument("--tile_stride", type=int, default=256)  # image size
-
-    parser.add_argument("--color_fix_type", type=str, default="adain", choices=["wavelet", "adain", "none"])
-    parser.add_argument("--output", type=str, default="experiments/test")
-    parser.add_argument("--t_max", type=float, default=0.6667)
-    parser.add_argument("--t_min", type=float, default=0.3333)
-    parser.add_argument("--show_lq", action="store_true")
-    parser.add_argument("--skip_if_exist", action="store_true")
-
-    parser.add_argument("--seed", type=int, default=233)
-    parser.add_argument("--device", type=str, default="cuda", choices=["cpu", "cuda", "mps"])
-
-    return parser.parse_args()
-
-if sr_xn == 2:
-    # 先 resize（//2）再超分（x4）
-    args = parse_args()
-    resize_input_path = sr_input
-    resize_output_dir = os.path.join(resize_input_path, 'resized_input')
-    resize_image(resize_input_path,resize_output_dir)
+def process_x2(args, sr_input, sr_output):
+    resize_output_dir = resize_and_set_args(args, sr_input, 'resized_input')
+    # resize 到原来的 1/2
     args.input = resize_output_dir
     args.output = sr_output
+    # x4 超分
+    save_path = main(args)
+    print('x2_result_path:', os.path.dirname(save_path))
+    return save_path
 
-    # 调用超分
-    save_path = main(args)  
-    x2_result_path = os.path.dirname(save_path)
-    print('x2_result_path:', x2_result_path)
+def process_x4(args, sr_input, sr_output, input_size):
+    args.input = sr_input
+    args.output = sr_output
+    # x4 超分
+    save_path = main(args)
+    print('x4_result_path:', os.path.dirname(save_path))
+    return save_path
 
-elif sr_xn == 4:
-    # 先 crop 成 4 张，分别超分（x4），再 combine 到一起
-    args = parse_args()
-    crop_input_dir = sr_input
-    crop_output_sir = crop(crop_input_dir)
+# def process_x4(args, sr_input, sr_output, input_size):
+#     crop_output_dir = crop(sr_input)
+#     args.input = crop_output_dir
+#     args.output = os.path.join(sr_output, 'mid_x4')
+#     save_path = main(args)
+#     comb_output_dir = combine(os.path.dirname(save_path), input_size, 4)
+#     print('x4_result_path:', comb_output_dir)
+#     return comb_output_dir
 
-    args.input = crop_output_sir
-    args.output = sr_mid_xn
-    # 调用超分
-    save_path = main(args) 
-    comb_input_dir = os.path.dirname(save_path)
-    
-    comb_output_dir = combine(comb_input_dir, input_size, sr_xn)
+# def process_x8(args, sr_input, sr_output, input_size):
+#     resize_output_dir = resize_and_set_args(args, sr_input, 'resized_input')
+#     mid_x8_path = main(args)
+#     crop_output_dir = crop(os.path.dirname(mid_x8_path))
+#     args.input = crop_output_dir
+#     args.output = os.path.join(sr_output, 'mid_x8')
+#     save_path = main(args)
+#     comb_output_dir = combine(os.path.dirname(save_path), input_size, 8)
+#     print('x8_result_path:', os.path.dirname(comb_output_dir))
+#     return os.path.dirname(comb_output_dir)
 
-    print('x4_result_path:', comb_output_dir)
+def resize_and_set_args(args, input_path, output_subdir):
+    output_dir = os.path.join(input_path, output_subdir)
+    resize_image(input_path, output_dir)
+    args.input = output_dir
+    return output_dir
 
-
-elif sr_xn == 8:
-    # 先 x2
-    args = parse_args()
-    resize_input_path = sr_input
-    resize_output_dir = os.path.join(resize_input_path, 'resized_input')
-    resize_image(resize_input_path, resize_output_dir)
-    args.input = resize_output_dir
-    args.output = sr_mid_xn
-
-    # 调用超分
-    save_path = main(args)  
-    x2_result_path = os.path.dirname(save_path)
-
-    # 如果要进一个循环的话，这个 crop 得是整的（不能用重叠？）
-    crop_input_dir = x2_result_path
-    crop_output_sir = crop(crop_input_dir)
-
-    # 再 x4 
-    # for crop_input_dir1 = crop_output_sir
-    #     crop_output_sir1 = crop(crop_input_dir1)
-
-    #     args.input = crop_output_sir1
-    #     args.output = sr_mid_xn
-    #     # 调用超分
-    #     save_path1 = main(args) 
-    #     comb_input_dir = os.path.dirname(save_path1)
-
-    args.input = crop_output_sir
-    args.output = sr_mid_xn1
-    # 调用超分
-    save_path1 = main(args) 
-    comb_input_dir = os.path.dirname(save_path1)
-
-    comb_output_dir = combine(comb_input_dir, input_size, sr_xn)
-
-    print('x8_result_path:', os.path.dirname(comb_output_dir))
+if __name__ == "__main__":
+    sr_xn = 4 
+    input_size = [200, 200]
+    sr_input = '/home/stone/Desktop/SR/CCSR1/CCSR/preset/test-200'
+    sr_output = srxn(input_size, sr_xn, sr_input)

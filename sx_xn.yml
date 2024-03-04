@@ -1,0 +1,17 @@
+ckpt: '/home/stone/Desktop/SR/CCSR1/CCSR/pre-trained-models/real-world_ccsr.ckpt'
+config: '/home/stone/Desktop/SR/CCSR1/CCSR/configs/model/ccsr_stage2.yaml'
+input: 'preprocess_img/input_x2' # 这个值需要被函数参数覆盖
+steps: 45
+sr_scale: 4 
+repeat_times: 1
+tiled: false
+tile_size: 512
+tile_stride: 256
+color_fix_type: "adain"
+output: '/path/to/output'  # 这个值将被函数参数覆盖
+t_max: 0.6667
+t_min: 0.3333
+show_lq: false
+skip_if_exist: false
+seed: 233
+device: "cuda"

@@ -21,22 +21,27 @@ def crop(crop_input_dir):
             width, height = img.size
 
             # 重叠剪裁的部分
-            overlap = 0.025 # 0.03 得到 528 输入会 OOM
+            overlap = 10 
 
             # 定义裁剪区域
             crop_areas = [
-                (0, 0, width // 2 + math.ceil((width // 2) * overlap), height // 2 + math.ceil((height // 2) * overlap)),  # 左上角++
-                (width // 2 - math.ceil((width // 2) * overlap), 0 , width, height // 2 + math.ceil((height // 2) * overlap)),  # 右上角-+
-                (0, height // 2 - math.ceil((height // 2) * overlap), width // 2 + math.ceil((width // 2) * overlap), height),  # 左下角-+
-                (width // 2 - math.ceil((width // 2) * overlap), height // 2 - math.ceil((height // 2) * overlap), width, height)  # 右下角
+                (0, 0, width // 2 + overlap, height // 2 + overlap),  # 左上角++
+                (width // 2 - overlap, 0 , width, height // 2 + overlap),  # 右上角-+
+                (0, height // 2 - overlap, width // 2 + overlap, height),  # 左下角-+
+                (width // 2 - overlap, height // 2 - overlap, width, height)  # 右下角
             ]
+            # crop_areas = [
+            #     (0, 0, width // 2 + math.ceil((width // 2) * overlap), height // 2 + math.ceil((height // 2) * overlap)),  # 左上角++
+            #     (width // 2 - math.ceil((width // 2) * overlap), 0 , width, height // 2 + math.ceil((height // 2) * overlap)),  # 右上角-+
+            #     (0, height // 2 - math.ceil((height // 2) * overlap), width // 2 + math.ceil((width // 2) * overlap), height),  # 左下角-+
+            #     (width // 2 - math.ceil((width // 2) * overlap), height // 2 - math.ceil((height // 2) * overlap), width, height)  # 右下角
+            # ]
             # crop_areas = [
             #     (0, 0, width // 2, height // 2 ),  # 左上角
             #     (width // 2, 0 , width, height // 2),  # 右上角
             #     (0, height // 2, width // 2, height),  # 左下角
             #     (width // 2, height // 2, width, height)  # 右下角
             # ]
-
 
             # 裁剪并保存图像
             for i, crop_area in enumerate(crop_areas, start=1):
