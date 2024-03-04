@@ -151,8 +151,8 @@ def check_device(device):
     return device
 
 
-def main(args) -> None:
-    #args = parse_args()
+def main(args) -> None: # args
+    # args = parse_args()
     input_path = args.input
     output_path = args.output
     pl.seed_everything(args.seed)
