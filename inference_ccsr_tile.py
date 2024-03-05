@@ -107,40 +107,40 @@ def process(
     return preds
 
 
-def parse_args() -> Namespace:
-    parser = ArgumentParser()
+# def parse_args() -> Namespace:
+    # parser = ArgumentParser()
     
-    # TODO: add help info for these options
-    parser.add_argument("--ckpt", type=str, help="full checkpoint path", default='****/real-world_ccsr.ckpt')
-    parser.add_argument("--config", type=str, help="model config path", default='configs/model/ccsr_stage2.yaml')
+    # # TODO: add help info for these options
+    # parser.add_argument("--ckpt", type=str, help="full checkpoint path", default='****/real-world_ccsr.ckpt')
+    # parser.add_argument("--config", type=str, help="model config path", default='configs/model/ccsr_stage2.yaml')
     
-    parser.add_argument("--input", type=str, default='preset/test_datasets')
-    parser.add_argument("--steps", type=int, default=45)
-    parser.add_argument("--sr_scale", type=float, default=4)
-    parser.add_argument("--repeat_times", type=int, default=1)
+    # parser.add_argument("--input", type=str, default='preset/test_datasets')
+    # parser.add_argument("--steps", type=int, default=45)
+    # parser.add_argument("--sr_scale", type=float, default=4)
+    # parser.add_argument("--repeat_times", type=int, default=1)
     
-    # patch-based sampling (tiling settings)
-    # Mixture-of-Diffusers: https://github.com/albarji/mixture-of-diffusers
-    parser.add_argument("--tile_diffusion", action="store_true", help='optional')
-    parser.add_argument("--tile_diffusion_size", type=int, default=512, help='image size')
-    parser.add_argument("--tile_diffusion_stride", type=int, default=256, help='image size')
+    # # patch-based sampling (tiling settings)
+    # # Mixture-of-Diffusers: https://github.com/albarji/mixture-of-diffusers
+    # parser.add_argument("--tile_diffusion", action="store_true", help='optional')
+    # parser.add_argument("--tile_diffusion_size", type=int, default=512, help='image size')
+    # parser.add_argument("--tile_diffusion_stride", type=int, default=256, help='image size')
 
-    # https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111/tree/main
-    parser.add_argument("--tile_vae", action="store_true", help='optional')
-    parser.add_argument("--vae_decoder_tile_size", type=int, default=224, help='latent size')
-    parser.add_argument("--vae_encoder_tile_size", type=int, default=1024, help='image size')
+    # # https://github.com/pkuliyi2015/multidiffusion-upscaler-for-automatic1111/tree/main
+    # parser.add_argument("--tile_vae", action="store_true", help='optional')
+    # parser.add_argument("--vae_decoder_tile_size", type=int, default=224, help='latent size')
+    # parser.add_argument("--vae_encoder_tile_size", type=int, default=1024, help='image size')
 
-    parser.add_argument("--color_fix_type", type=str, default="adain", choices=["wavelet", "adain", "none"])
-    parser.add_argument("--output", type=str,default="experiments/test_tile")
-    parser.add_argument("--t_max", type=float, default=0.6667)
-    parser.add_argument("--t_min", type=float, default=0.3333)
-    parser.add_argument("--show_lq", action="store_true")
-    parser.add_argument("--skip_if_exist", action="store_true")
+    # parser.add_argument("--color_fix_type", type=str, default="adain", choices=["wavelet", "adain", "none"])
+    # parser.add_argument("--output", type=str,default="experiments/test_tile")
+    # parser.add_argument("--t_max", type=float, default=0.6667)
+    # parser.add_argument("--t_min", type=float, default=0.3333)
+    # parser.add_argument("--show_lq", action="store_true")
+    # parser.add_argument("--skip_if_exist", action="store_true")
     
-    parser.add_argument("--seed", type=int, default=233)
-    parser.add_argument("--device", type=str, default="cuda", choices=["cpu", "cuda", "mps"])
+    # parser.add_argument("--seed", type=int, default=233)
+    # parser.add_argument("--device", type=str, default="cuda", choices=["cpu", "cuda", "mps"])
     
-    return parser.parse_args()
+    # return parser.parse_args()
 
 def check_device(device):
     if device == "cuda":
@@ -166,8 +166,8 @@ def check_device(device):
     print(f'using device {device}')
     return device
 
-def main() -> None:
-    args = parse_args()
+def main(args) -> None: #args
+    # args = parse_args()
     pl.seed_everything(args.seed)
     
     args.device = check_device(args.device)
@@ -201,7 +201,8 @@ def main() -> None:
         for i in range(args.repeat_times):
             save_path = os.path.join(args.output, os.path.relpath(file_path, args.input))
             parent_path, stem, _ = get_file_name_parts(save_path)
-            save_path_now = os.path.join(parent_path, 'sample'+str(i))
+            # save_path_now = os.path.join(parent_path, 'sample'+str(i))
+            save_path_now = os.path.join(parent_path)
             
             save_path = os.path.join(save_path_now, f"{stem}.png")
             if os.path.exists(save_path):
@@ -235,6 +236,8 @@ def main() -> None:
                 Image.fromarray(pred).resize(lq.size, Image.LANCZOS).save(save_path)
 
             print(f"save to {save_path}")
+    
+    return save_path
 
 if __name__ == "__main__":
-    main()
+    sr_output_dir = main()

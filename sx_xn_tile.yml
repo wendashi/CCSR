@@ -1,0 +1,20 @@
+input: /home/stone/Desktop/SR/CCSR1/CCSR/preset/test-512 # 这个值会被函数参数覆盖
+config: /home/stone/Desktop/SR/CCSR_tile/CCSR/configs/model/ccsr_stage2.yaml
+ckpt: /home/stone/Desktop/SR/CCSR1/CCSR/pre-trained-models/real-world_ccsr.ckpt
+steps: 20
+sr_scale: 4
+t_max: 0.6667
+t_min: 0.3333
+tile_diffusion: False
+tile_diffusion_size: 512
+tile_diffusion_stride: 256
+tile_vae: true
+vae_decoder_tile_size: 224
+vae_encoder_tile_size: 1024
+color_fix_type: adain
+show_lq: False
+skip_if_exist: False
+output: experiments/test # 这个值会被函数参数覆盖
+device: cuda
+seed: 233
+repeat_times: 1
